@@ -72,7 +72,7 @@ To pin to taskbar: Right-click the desktop shortcut and select "Pin to taskbar"
 | Chain ID | 2330 |
 | RPC Port | 8332 |
 | P2P Port | 31303 |
-| Block Explorer | https://scout.altcoinchain.org |
+| Block Explorer | https://alt-exp.outsidethebox.top |
 | Website | https://altcoinchain.org |
 
 ## Mining Rewards
