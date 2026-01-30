@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Altcoinchain Wallet</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Title bar for frameless window */
+    .title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 32px;
+      background: rgba(0, 0, 0, 0.5);
+      -webkit-app-region: drag;
+      padding: 0 10px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    .title-bar-title {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .window-controls {
+      display: flex;
+      -webkit-app-region: no-drag;
+    }
+
+    .window-btn {
+      width: 46px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: #888;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .window-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .window-btn.close:hover {
+      background: #e81123;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 52px 20px 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid #333;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo h1 {
+      font-size: 24px;
+      background: linear-gradient(90deg, #00ff88, #00ccff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      border-radius: 25px;
+    }
+
+    .status.disconnected {
+      background: rgba(255, 68, 68, 0.1);
+      border-color: rgba(255, 68, 68, 0.3);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #00ff88;
+      animation: pulse 2s infinite;
+    }
+
+    .status.disconnected .status-dot {
+      background: #ff4444;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 25px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 255, 136, 0.1);
+    }
+
+    .stat-card h3 {
+      color: #888;
+      font-size: 14px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .stat-card .value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00ff88;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    @media (max-width: 1000px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 25px;
+    }
+
+    .panel.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .panel h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .wallet-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .wallet-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .wallet-item:hover {
+      border-color: rgba(0, 255, 136, 0.3);
+    }
+
+    .wallet-item.selected {
+      border-color: #00ff88;
+      background: rgba(0, 255, 136, 0.1);
+    }
+
+    .wallet-address {
+      font-family: monospace;
+      font-size: 14px;
+      color: #aaa;
+      word-break: break-all;
+    }
+
+    .wallet-balances {
+      text-align: right;
+    }
+
+    .wallet-balance {
+      font-size: 18px;
+      font-weight: bold;
+      color: #00ff88;
+    }
+
+    .token-balance {
+      font-size: 13px;
+      color: #00ccff;
+      margin-top: 4px;
+    }
+
+    .nft-balance {
+      font-size: 13px;
+      color: #ff88ff;
+      margin-top: 4px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #00ff88, #00ccff);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-small {
+      padding: 8px 16px;
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #00ff88;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #888;
+      font-size: 14px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(0, 255, 136, 0.1);
+      border-top-color: #00ff88;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .import-section {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .error-msg {
+      color: #ff4444;
+      font-size: 14px;
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 68, 68, 0.1);
+      border-radius: 8px;
+    }
+
+    .success-msg {
+      color: #00ff88;
+      font-size: 14px;
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0, 255, 136, 0.1);
+      border-radius: 8px;
+    }
+
+    /* NFT Grid */
+    .nft-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .nft-card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .nft-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 136, 255, 0.5);
+    }
+
+    .nft-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #ff88ff, #8888ff);
+      border-radius: 10px;
+      margin: 0 auto 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .nft-id {
+      font-family: monospace;
+      font-size: 14px;
+      color: #ff88ff;
+    }
+
+    .nft-name {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      color: #888;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .tab.active {
+      background: rgba(0, 255, 136, 0.2);
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .refresh-btn {
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 5px;
+      transition: color 0.2s;
+    }
+
+    .refresh-btn:hover {
+      color: #00ff88;
+    }
+
+    .refresh-btn.spinning {
+      animation: spin 1s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <!-- Title bar with window controls -->
+  <div class="title-bar">
+    <span class="title-bar-title">Altcoinchain Wallet</span>
+    <div class="window-controls">
+      <button class="window-btn minimize" onclick="windowAction('minimize')" title="Minimize">&#8212;</button>
+      <button class="window-btn maximize" onclick="windowAction('maximize')" title="Maximize">&#9633;</button>
+      <button class="window-btn close" onclick="windowAction('close')" title="Close">&#10005;</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="logo">
+        <h1>Altcoinchain Wallet</h1>
+      </div>
+      <div class="status" id="status">
+        <div class="status-dot"></div>
+        <span id="status-text">Connecting...</span>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Block Height</h3>
+        <div class="value" id="block-height">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Peers</h3>
+        <div class="value" id="peer-count">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Total ALT</h3>
+        <div class="value" id="total-balance">0 ALT</div>
+      </div>
+      <div class="stat-card">
+        <h3>Total WATT</h3>
+        <div class="value" id="total-watt" style="color: #00ccff;">0 WATT</div>
+      </div>
+      <div class="stat-card">
+        <h3>NFTs Owned</h3>
+        <div class="value" id="total-nfts" style="color: #ff88ff;">0</div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="panel">
+        <h2>
+          Accounts
+          <button class="refresh-btn" onclick="refreshAll()" title="Refresh">&#8635;</button>
+        </h2>
+        <div class="wallet-list" id="wallet-list">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading accounts...</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="createAccount()">Create Account</button>
+          <button class="btn btn-secondary" onclick="toggleImport()">Import Key</button>
+        </div>
+        <div class="import-section hidden" id="import-section">
+          <label>Private Key (without 0x prefix)</label>
+          <input type="password" id="private-key" placeholder="Enter private key...">
+          <label>Password (to encrypt the key)</label>
+          <input type="password" id="import-password" placeholder="Enter password...">
+          <button class="btn btn-primary" onclick="importAccount()">Import Account</button>
+          <div id="import-msg"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Send ALT</h2>
+        <div>
+          <label>From Account</label>
+          <select id="from-address">
+            <option value="">Select account...</option>
+          </select>
+
+          <label>To Address</label>
+          <input type="text" id="to-address" placeholder="0x...">
+
+          <label>Amount (ALT)</label>
+          <input type="number" id="send-amount" placeholder="0.0" step="0.001">
+
+          <label>Password (to unlock account)</label>
+          <input type="password" id="send-password" placeholder="Enter password...">
+
+          <button class="btn btn-primary" onclick="sendTransaction()" style="width: 100%;">Send Transaction</button>
+          <div id="send-msg"></div>
+        </div>
+      </div>
+
+      <div class="panel full-width">
+        <h2>
+          Mining Game Assets
+          <button class="refresh-btn" onclick="refreshAssets()" title="Refresh">&#8635;</button>
+        </h2>
+        <div class="tabs">
+          <div class="tab active" onclick="showTab('tokens')">WATT Tokens</div>
+          <div class="tab" onclick="showTab('nfts')">NFTs</div>
+          <div class="tab" onclick="showTab('staking')">Staking</div>
+        </div>
+
+        <div id="tokens-tab">
+          <div id="token-balances">
+            <p style="color: #666;">Select an account to view token balances</p>
+          </div>
+        </div>
+
+        <div id="nfts-tab" class="hidden">
+          <div class="nft-grid" id="nft-grid">
+            <p style="color: #666;">Select an account to view NFTs</p>
+          </div>
+        </div>
+
+        <div id="staking-tab" class="hidden">
+          <div id="staking-info">
+            <p style="color: #666;">Select an account to view staking info</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Window controls for Electron
+    let ipcRenderer;
+    try {
+      ipcRenderer = require('electron').ipcRenderer;
+    } catch (e) {
+      console.log('Running outside Electron');
+    }
+
+    function windowAction(action) {
+      if (ipcRenderer) {
+        ipcRenderer.send('window-action', action);
+      }
+    }
+
+    const RPC_URL = 'http://127.0.0.1:8332';
+
+    // Contract addresses
+    const CONTRACTS = {
+      WATT: '0x6645143e49B3a15d8F205658903a55E520444698',
+      NFT: '0xf9670e5D46834561813CA79854B3d7147BBbFfb2',
+      STAKING: '0xe463045318393095F11ed39f1a98332aBCc1A7b1'
+    };
+
+    // Function selectors
+    const SELECTORS = {
+      balanceOf: '0x70a08231',
+      tokenOfOwnerByIndex: '0x2f745c59',
+      tokenURI: '0xc87b56dd',
+      stakedBalance: '0x60936993',
+      earned: '0x008cc262'
+    };
+
+    let selectedAccount = null;
+    let accounts = [];
+
+    // RPC call helper
+    async function rpcCall(method, params = []) {
+      try {
+        const response = await fetch(RPC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', method, params, id: Date.now() })
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+        return data.result;
+      } catch (error) {
+        console.error('RPC Error:', method, error);
+        throw error;
+      }
+    }
+
+    // Contract call helper
+    async function contractCall(contractAddress, data) {
+      return await rpcCall('eth_call', [{ to: contractAddress, data }, 'latest']);
+    }
+
+    // Encode address for contract call
+    function encodeAddress(address) {
+      return address.slice(2).toLowerCase().padStart(64, '0');
+    }
+
+    // Encode uint256 for contract call
+    function encodeUint256(value) {
+      return BigInt(value).toString(16).padStart(64, '0');
+    }
+
+    // Get ERC-20 balance
+    async function getTokenBalance(tokenAddress, walletAddress) {
+      try {
+        const data = SELECTORS.balanceOf + encodeAddress(walletAddress);
+        const result = await contractCall(tokenAddress, data);
+        return BigInt(result);
+      } catch (error) {
+        console.error('Token balance error:', error);
+        return 0n;
+      }
+    }
+
+    // Get ERC-721 balance (number of NFTs)
+    async function getNFTBalance(nftAddress, walletAddress) {
+      try {
+        const data = SELECTORS.balanceOf + encodeAddress(walletAddress);
+        const result = await contractCall(nftAddress, data);
+        return BigInt(result);
+      } catch (error) {
+        console.error('NFT balance error:', error);
+        return 0n;
+      }
+    }
+
+    // Get NFT token ID by index
+    async function getTokenOfOwnerByIndex(nftAddress, walletAddress, index) {
+      try {
+        const data = SELECTORS.tokenOfOwnerByIndex + encodeAddress(walletAddress) + encodeUint256(index);
+        const result = await contractCall(nftAddress, data);
+        return BigInt(result);
+      } catch (error) {
+        console.error('Token of owner error:', error);
+        return null;
+      }
+    }
+
+    // Update connection status
+    async function updateStatus() {
+      try {
+        const blockNumber = await rpcCall('eth_blockNumber');
+        const peerCount = await rpcCall('net_peerCount');
+
+        document.getElementById('block-height').textContent = parseInt(blockNumber, 16).toLocaleString();
+        document.getElementById('peer-count').textContent = parseInt(peerCount, 16);
+        document.getElementById('status').classList.remove('disconnected');
+        document.getElementById('status-text').textContent = 'Connected';
+      } catch (error) {
+        document.getElementById('status').classList.add('disconnected');
+        document.getElementById('status-text').textContent = 'Disconnected';
+        document.getElementById('block-height').textContent = '-';
+        document.getElementById('peer-count').textContent = '-';
+      }
+    }
+
+    // Load accounts from node
+    async function loadAccounts() {
+      const listEl = document.getElementById('wallet-list');
+      const selectEl = document.getElementById('from-address');
+
+      try {
+        accounts = await rpcCall('eth_accounts');
+      } catch (error) {
+        listEl.innerHTML = '<p class="error-msg">Failed to load accounts. Is the node running?</p>';
+        return;
+      }
+
+      if (accounts.length === 0) {
+        listEl.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No accounts yet. Create or import one.</p>';
+        selectEl.innerHTML = '<option value="">No accounts</option>';
+        document.getElementById('total-balance').textContent = '0 ALT';
+        document.getElementById('total-watt').textContent = '0 WATT';
+        document.getElementById('total-nfts').textContent = '0';
+        return;
+      }
+
+      let totalBalance = 0n;
+      let totalWatt = 0n;
+      let totalNfts = 0n;
+      let html = '';
+      let selectHtml = '<option value="">Select account...</option>';
+
+      for (const address of accounts) {
+        try {
+          // Get ALT balance
+          const balance = await rpcCall('eth_getBalance', [address, 'latest']);
+          const balanceWei = BigInt(balance);
+          totalBalance += balanceWei;
+          const balanceAlt = (Number(balanceWei) / 1e18).toFixed(4);
+
+          // Get WATT balance
+          const wattBalance = await getTokenBalance(CONTRACTS.WATT, address);
+          totalWatt += wattBalance;
+          const wattFormatted = (Number(wattBalance) / 1e18).toFixed(4);
+
+          // Get NFT balance
+          const nftBalance = await getNFTBalance(CONTRACTS.NFT, address);
+          totalNfts += nftBalance;
+
+          const isSelected = selectedAccount === address;
+          html += `
+            <div class="wallet-item ${isSelected ? 'selected' : ''}" onclick="selectAccount('${address}')">
+              <div>
+                <div class="wallet-address">${address}</div>
+                <div class="token-balance">${wattFormatted} WATT</div>
+                <div class="nft-balance">${nftBalance.toString()} NFTs</div>
+              </div>
+              <div class="wallet-balances">
+                <div class="wallet-balance">${balanceAlt} ALT</div>
+              </div>
+            </div>
+          `;
+          selectHtml += `<option value="${address}">${address.slice(0, 10)}...${address.slice(-8)} (${balanceAlt} ALT)</option>`;
+        } catch (error) {
+          console.error('Error loading account:', address, error);
+          html += `
+            <div class="wallet-item" onclick="selectAccount('${address}')">
+              <div class="wallet-address">${address}</div>
+              <div class="wallet-balance" style="color: #ff4444;">Error loading</div>
+            </div>
+          `;
+        }
+      }
+
+      listEl.innerHTML = html;
+      selectEl.innerHTML = selectHtml;
+      if (selectedAccount) {
+        selectEl.value = selectedAccount;
+      }
+
+      document.getElementById('total-balance').textContent = (Number(totalBalance) / 1e18).toFixed(4) + ' ALT';
+      document.getElementById('total-watt').textContent = (Number(totalWatt) / 1e18).toFixed(4) + ' WATT';
+      document.getElementById('total-nfts').textContent = totalNfts.toString();
+    }
+
+    // Select an account
+    async function selectAccount(address) {
+      selectedAccount = address;
+      document.getElementById('from-address').value = address;
+
+      // Update UI
+      document.querySelectorAll('.wallet-item').forEach(el => {
+        el.classList.remove('selected');
+        if (el.querySelector('.wallet-address').textContent === address) {
+          el.classList.add('selected');
+        }
+      });
+
+      // Load assets for this account
+      await loadAccountAssets(address);
+    }
+
+    // Load assets for selected account
+    async function loadAccountAssets(address) {
+      // Load WATT balance
+      const tokenEl = document.getElementById('token-balances');
+      try {
+        const wattBalance = await getTokenBalance(CONTRACTS.WATT, address);
+        const wattFormatted = (Number(wattBalance) / 1e18).toFixed(4);
+        tokenEl.innerHTML = `
+          <div class="wallet-item">
+            <div>
+              <div style="font-weight: bold; color: #00ccff;">WATT Token</div>
+              <div class="wallet-address">${CONTRACTS.WATT}</div>
+            </div>
+            <div class="wallet-balance" style="color: #00ccff;">${wattFormatted} WATT</div>
+          </div>
+        `;
+      } catch (error) {
+        tokenEl.innerHTML = '<p class="error-msg">Failed to load token balance</p>';
+      }
+
+      // Load NFTs
+      const nftEl = document.getElementById('nft-grid');
+      try {
+        const nftBalance = await getNFTBalance(CONTRACTS.NFT, address);
+        const nftCount = Number(nftBalance);
+
+        if (nftCount === 0) {
+          nftEl.innerHTML = '<p style="color: #666;">No NFTs found for this account</p>';
+        } else {
+          let nftHtml = '';
+          for (let i = 0; i < Math.min(nftCount, 50); i++) {
+            const tokenId = await getTokenOfOwnerByIndex(CONTRACTS.NFT, address, i);
+            if (tokenId !== null) {
+              nftHtml += `
+                <div class="nft-card">
+                  <div class="nft-icon">&#9889;</div>
+                  <div class="nft-id">#${tokenId.toString()}</div>
+                  <div class="nft-name">Mining NFT</div>
+                </div>
+              `;
+            }
+          }
+          nftEl.innerHTML = nftHtml || '<p style="color: #666;">No NFTs found</p>';
+        }
+      } catch (error) {
+        console.error('NFT load error:', error);
+        nftEl.innerHTML = '<p class="error-msg">Failed to load NFTs</p>';
+      }
+
+      // Load staking info
+      const stakingEl = document.getElementById('staking-info');
+      try {
+        // Try to get staked balance
+        const stakedData = SELECTORS.balanceOf + encodeAddress(address);
+        const stakedResult = await contractCall(CONTRACTS.STAKING, stakedData);
+        const staked = BigInt(stakedResult);
+
+        stakingEl.innerHTML = `
+          <div class="wallet-item">
+            <div>
+              <div style="font-weight: bold; color: #ff88ff;">NFT Staking Contract</div>
+              <div class="wallet-address">${CONTRACTS.STAKING}</div>
+            </div>
+            <div>
+              <div class="wallet-balance" style="color: #ff88ff;">${staked > 0n ? staked.toString() + ' staked' : 'No NFTs staked'}</div>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        stakingEl.innerHTML = '<p style="color: #666;">Staking contract info unavailable</p>';
+      }
+    }
+
+    // Create new account
+    async function createAccount() {
+      const password = prompt('Enter a password to encrypt the new account:');
+      if (!password) return;
+
+      try {
+        const address = await rpcCall('personal_newAccount', [password]);
+        alert('Account created: ' + address);
+        await loadAccounts();
+      } catch (error) {
+        alert('Failed to create account: ' + error.message);
+      }
+    }
+
+    // Toggle import section
+    function toggleImport() {
+      const section = document.getElementById('import-section');
+      section.classList.toggle('hidden');
+    }
+
+    // Import account from private key
+    async function importAccount() {
+      const privateKey = document.getElementById('private-key').value.trim();
+      const password = document.getElementById('import-password').value;
+      const msgEl = document.getElementById('import-msg');
+
+      if (!privateKey || !password) {
+        msgEl.innerHTML = '<div class="error-msg">Please enter both private key and password</div>';
+        return;
+      }
+
+      // Remove 0x prefix if present
+      const key = privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey;
+
+      if (key.length !== 64) {
+        msgEl.innerHTML = '<div class="error-msg">Invalid private key length (should be 64 hex characters)</div>';
+        return;
+      }
+
+      try {
+        const address = await rpcCall('personal_importRawKey', [key, password]);
+        msgEl.innerHTML = '<div class="success-msg">Account imported: ' + address + '</div>';
+        document.getElementById('private-key').value = '';
+        document.getElementById('import-password').value = '';
+        await loadAccounts();
+      } catch (error) {
+        msgEl.innerHTML = '<div class="error-msg">' + error.message + '</div>';
+      }
+    }
+
+    // Send transaction
+    async function sendTransaction() {
+      const from = document.getElementById('from-address').value;
+      const to = document.getElementById('to-address').value;
+      const amount = document.getElementById('send-amount').value;
+      const password = document.getElementById('send-password').value;
+      const msgEl = document.getElementById('send-msg');
+
+      if (!from || !to || !amount || !password) {
+        msgEl.innerHTML = '<div class="error-msg">Please fill in all fields</div>';
+        return;
+      }
+
+      try {
+        // Unlock account
+        await rpcCall('personal_unlockAccount', [from, password, 30]);
+
+        // Get gas price
+        const gasPrice = await rpcCall('eth_gasPrice');
+
+        // Send transaction
+        const value = '0x' + BigInt(Math.floor(parseFloat(amount) * 1e18)).toString(16);
+        const txHash = await rpcCall('eth_sendTransaction', [{
+          from,
+          to,
+          value,
+          gas: '0x5208', // 21000
+          gasPrice
+        }]);
+
+        msgEl.innerHTML = '<div class="success-msg">Transaction sent! Hash: ' + txHash.slice(0, 20) + '...</div>';
+        document.getElementById('send-password').value = '';
+
+        // Refresh balances after a delay
+        setTimeout(loadAccounts, 3000);
+      } catch (error) {
+        msgEl.innerHTML = '<div class="error-msg">' + error.message + '</div>';
+      }
+    }
+
+    // Tab switching
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.tab:nth-child(${tab === 'tokens' ? 1 : tab === 'nfts' ? 2 : 3})`).classList.add('active');
+
+      document.getElementById('tokens-tab').classList.toggle('hidden', tab !== 'tokens');
+      document.getElementById('nfts-tab').classList.toggle('hidden', tab !== 'nfts');
+      document.getElementById('staking-tab').classList.toggle('hidden', tab !== 'staking');
+    }
+
+    // Refresh all data
+    async function refreshAll() {
+      const btn = document.querySelector('.refresh-btn');
+      btn.classList.add('spinning');
+      await loadAccounts();
+      if (selectedAccount) {
+        await loadAccountAssets(selectedAccount);
+      }
+      btn.classList.remove('spinning');
+    }
+
+    // Refresh assets only
+    async function refreshAssets() {
+      if (selectedAccount) {
+        await loadAccountAssets(selectedAccount);
+      }
+    }
+
+    // Initialize
+    updateStatus();
+    loadAccounts();
+
+    // Auto-refresh
+    setInterval(updateStatus, 5000);
+    setInterval(loadAccounts, 60000);
+  </script>
+</body>
+</html>
